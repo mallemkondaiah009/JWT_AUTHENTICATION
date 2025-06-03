@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .notification {
+            animation: fadeIn 0.3s ease-in, fadeOut 0.3s ease-out 4.7s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div id="notification-container" class="fixed top-4 right-4 z-50">
+        <div id="error-message" class="text-red-500 bg-white p-4 rounded-md shadow-md hidden max-w-sm"></div>
+        <div id="success-message" class="text-green-500 bg-white p-4 rounded-md shadow-md hidden max-w-sm"></div>
+    </div>
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
+        <form id="login-form">
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="email" name="email" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <div id="email-error" class="text-red-500 text-sm mt-1 hidden"></div>
+            </div>
+            <div class="mb-6">
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="password" name="password" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <div id="password-error" class="text-red-500 text-sm mt-1 hidden"></div>
+            </div>
+            <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Login</button>
+        </form>
+        <p class="mt-4 text-center text-sm text-gray-600">
+            Don't have an account? 
+            <a href="/register/" class="text-blue-500 hover:text-blue-700 underline">Register</a>
+        </p>
+    </div>
+
+    <script>
+        const form = document.getElementById('login-form');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        const emailError = document.getElementById('email-error');
+        const passwordError = document.getElementById('password-error');
+
+        let notificationTimeout = null; // Store timeout ID for notifications
+
+        // Function to show notification
+        function showNotification(element, message) {
+            // Clear existing timeout
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+            }
+            // Hide both messages
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+            // Set message and show
+            element.textContent = message;
+            element.classList.remove('hidden');
+            element.classList.add('notification');
+            // Auto-hide after 5 seconds
+            notificationTimeout = setTimeout(() => {
+                element.classList.add('hidden');
+                element.classList.remove('notification');
+                element.textContent = '';
+            }, 5000);
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Reset messages
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+            emailError.classList.add('hidden');
+            passwordError.classList.add('hidden');
+            errorMessage.textContent = '';
+            emailError.textContent = '';
+            passwordError.textContent = '';
+            successMessage.textContent = '';
+
+            const formData = {
+                email: form.email.value,
+                password: form.password.value
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification(successMessage, 'Login successful! Redirecting to profile...');
+                    form.reset();
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    // Redirect to profile page after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/profile/';
+                    }, 2000);
+                } else {
+                    // Handle errors
+                    if (data.error) {
+                        showNotification(errorMessage, data.error);
+                    }
+                    if (data.email) {
+                        emailError.textContent = data.email.join(', ');
+                        emailError.classList.remove('hidden');
+                    }
+                    if (data.password) {
+                        passwordError.textContent = data.password.join(', ');
+                        passwordError.classList.remove('hidden');
+                    }
+                    if (!data.error && !data.email && !data.password) {
+                        showNotification(errorMessage, 'Login failed. Please check your input.');
+                    }
+                }
+            } catch (error) {
+                showNotification(errorMessage, 'An error occurred. Please try again later.');
+            }
+        });
+    </script>
+</body>
+</html>
