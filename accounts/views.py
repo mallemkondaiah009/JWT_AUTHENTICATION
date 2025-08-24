@@ -56,6 +56,7 @@ class DashboardAPIView(generics.RetrieveAPIView):
     def get(self, request, *args, **kwargs):
         user = self.get_object()
         serializer = self.get_serializer(user)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class UserInfoUpdate(generics.RetrieveUpdateDestroyAPIView):
